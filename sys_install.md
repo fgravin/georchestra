@@ -1,0 +1,18 @@
+LDAP
+====
+
+* Installation des paquets
+
+    apt-get install slapd ldap-utils
+  
+* Configuration de l'arborescence
+
+    vi /etc/ldap/slapd.d/cn=config/olcDatabase={1}hdb.ldif
+
+	* Changer les valeurs :
+
+		olcRootDN= cn=admin,dc=georchestra,dc=org
+		olcSuffix= dc=georchestra,dc=org
+		
+* Redémarrage
+    /etc/init.d/slapd restart
