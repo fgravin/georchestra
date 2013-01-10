@@ -84,32 +84,22 @@ Apache
 
 * Chargement des modules
 
-::
-
-	- $  apt-get install apache2 libapache2-mod-auth-cas 
+        apt-get install apache2 libapache2-mod-auth-cas 
 
 * liste des modules disponibles pour apache
 
-::
-
-	- $ ls /etc/apache2/mods-enabled
-	- $ a2enmod proxy_ajp proxy_connect proxy_http proxy
-	- $ a2enmod ssl rewrite
-	- $ /etc/init.d/apach2 restart
+        ls /etc/apache2/mods-enabled
+        a2enmod proxy_ajp proxy_connect proxy_http proxy
+        a2enmod ssl rewrite
+        /etc/init.d/apach2 restart
 
 * Création du VirtualHost
 
-::
+        cd /etc/apache2/site-available
+        a2dissite default default-ssl
+        vi georchestra
 
-   $ cd /etc/apache2/site-available
-   $ a2dissite default default-ssl
-   $ vi georchestra
-
-Apache
---------
-
-::
-
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    	<VirtualHost *:80>
 		 ServerName georchestra.georchestra.inra.fr
 		 DocumentRoot /var/www/georchestra/htdocs
@@ -132,69 +122,52 @@ Apache
 		 SSLCACertificateFile /etc/ssl/certs/ca-certificates.crt
 		 ServerSignature Off
 	</VirtualHost>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-$ a2ensite georchestra
-
-Apache
---------
+        a2ensite georchestra
    
 * Création de l'arborescence apache pour georchestra
 
-::
+        cd /var/www
+        mkdir georchestra
+        cd georchestra
+        mkdir conf htdocs logs ssl
 
-	$ cd /var/www
-	$ mkdir georchestra
-	$ cd georchestra
-	$ mkdir conf htdocs logs ssl
+    l'user apache sous Debien = www-data
 
-l'user apache sous Debien = www-data
+        id www-data
 
-::
+    il faut donner les droits d'ecriture a www-data dans logs
 
-	$ id www-data
+        chgrp www-data logs/
+        chmod g+w logs/
 
-il faut donner les droits d'ecriture a www-data dans logs
+    copier les configs sur la VM
 
-::
-
-		$ chgrp www-data logs/
-		$ chmod g+w logs/
-
-copier les configs sur la VM
-
-::
-
-		$ cd /var/www/georchestra/conf
-		$ rm auth-base-basic-file-user-phpldapadmin.conf
-		$ rm directive-phpldapadmin.conf
+        cd /var/www/georchestra/conf
+        rm auth-base-basic-file-user-phpldapadmin.conf
+        rm directive-phpldapadmin.conf
  
 Apache - Certificat SSL
 -----------------------
 
 * on génère la clé privée
 
-::
-
-		$ cd /var/www/georchestra/ssl
-		$ openssl genrsa -des3 -out georchestra.key 1024
+        cd /var/www/georchestra/ssl
+        openssl genrsa -des3 -out georchestra.key 1024
 
 * on génère le certificat pour cette clé
 
-::
-
-		$ openssl req -new -key georchestra.key -out georchestra.csr
+        openssl req -new -key georchestra.key -out georchestra.csr
 
 * on rentre les informations sans mettre de mot de pass
-	Common Name (eg, YOUR name) []: mettre geoserver.georchestra.inra.fr, cela correspondra à l'adresse du site
+
+        Common Name (eg, YOUR name) []: mettre geoserver.georchestra.inra.fr, cela correspondra à l'adresse du site
+
 * Creer une clé non protégée
 
-::
-
-		$ openssl rsa -in georchestra.key -out georchestra-unprotected.key
-		$ openssl x509 -req -days 365 -in georchestra.csr -signkey georchestra.key -out georchestra.crt
-
-Apache
--------
+        openssl rsa -in georchestra.key -out georchestra-unprotected.key
+        openssl x509 -req -days 365 -in georchestra.csr -signkey georchestra.key -out georchestra.crt
 
 * Test
 	* $ dhclient eth0
