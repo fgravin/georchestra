@@ -101,7 +101,7 @@ Apache
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    	<VirtualHost *:80>
-		 ServerName georchestra.georchestra.inra.fr
+		 ServerName vm-georchestra
 		 DocumentRoot /var/www/georchestra/htdocs
 		 LogLevel warn
 		 ErrorLog /var/www/georchestra/logs/error.log
@@ -110,7 +110,7 @@ Apache
 		 ServerSignature Off
 	</VirtualHost>
 	<VirtualHost *:443>
-		 ServerName georchestra.georchestra.inra.fr
+		 ServerName vm-georchestra
 		 DocumentRoot /var/www/georchestra/htdocs
 		 LogLevel warn
 		 ErrorLog /var/www/georchestra/logs/error.log
@@ -142,11 +142,92 @@ Apache
         chgrp www-data logs/
         chmod g+w logs/
 
-    copier les configs sur la VM
+* Création de la configuration Apache
 
-        cd /var/www/georchestra/conf
-        rm auth-base-basic-file-user-phpldapadmin.conf
-        rm directive-phpldapadmin.conf
+        vim proxypass.conf
+        
+    Y copier la configuration suivante :
+        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    <IfModule !mod_proxy.c>
+        LoadModule proxy_module /usr/lib/apache2/modules/mod_proxy.so
+    </IfModule>
+    <IfModule !mod_proxy_http.c>
+        LoadModule proxy_http_module /usr/lib/apache2/modules/mod_proxy_http.so
+    </IfModule>
+
+    <Proxy *>
+        Order deny,allow
+        Allow from all
+    </Proxy>
+
+    RewriteLog /tmp/rewrite.log
+    RewriteLogLevel 3
+
+    SetEnv no-gzip on
+    ProxyTimeout 999999999
+
+    RewriteEngine On
+    RewriteRule ^/analytics$ /analytics/ [R]
+    RewriteRule ^/cas$ /cas/ [R]
+    RewriteRule ^/catalogapp$ /catalogapp/ [R]
+    RewriteRule ^/downloadform$ /downloadform/ [R]
+    RewriteRule ^/extractorapp$ /extractorapp/ [R]
+    RewriteRule ^/extractorapp$ /extractorapp/ [R]
+    RewriteRule ^/geonetwork$ /geonetwork/ [R]
+    RewriteRule ^/geoserver2/(.*)$ /geoserver/$1 [R]
+    RewriteRule ^/geoserver$ /geoserver/ [R]
+    RewriteRule ^/geowebcache$ /geowebcache/ [R]
+    RewriteRule ^/mapfishapp$ /mapfishapp/ [R]
+    RewriteRule ^/proxy$ /proxy/ [R]
+    RewriteRule ^/static$ /static/ [R]
+
+    ProxyPass /analytics/ ajp://localhost:8009/analytics/ 
+    ProxyPassReverse /analytics/ ajp://localhost:8009/analytics/
+
+    ProxyPass /cas/ ajp://localhost:8009/cas/ 
+    ProxyPassReverse /cas/ ajp://localhost:8009/cas/
+
+    ProxyPass /casfailed.jsp ajp://localhost:8009/casfailed.jsp 
+    ProxyPassReverse /casfailed.jsp ajp://localhost:8009/casfailed.jsp
+
+    ProxyPass /catalogapp/ ajp://localhost:8009/catalogapp/ 
+    ProxyPassReverse /catalogapp/ ajp://localhost:8009/catalogapp/
+
+    ProxyPass /downloadform/ ajp://localhost:8009/downloadform/ 
+    ProxyPassReverse /downloadform/ ajp://localhost:8009/downloadform/
+
+    ProxyPass /extractorapp/ ajp://localhost:8009/extractorapp/ 
+    ProxyPassReverse /extractorapp/ ajp://localhost:8009/extractorapp/
+
+    ProxyPass /geonetwork/ ajp://localhost:8009/geonetwork/ 
+    ProxyPassReverse /geonetwork/ ajp://localhost:8009/geonetwork/
+
+    ProxyPass /geoserver/ ajp://localhost:8009/geoserver/ 
+    ProxyPassReverse /geoserver/ ajp://localhost:8009/geoserver/
+
+    ProxyPass /geowebcache/ ajp://localhost:8009/geowebcache/ 
+    ProxyPassReverse /geowebcache/ ajp://localhost:8009/geowebcache/
+
+    ProxyPass /j_spring_cas_security_check ajp://localhost:8009/j_spring_cas_security_check 
+    ProxyPassReverse /j_spring_cas_security_check ajp://localhost:8009/j_spring_cas_security_check
+
+    ProxyPass /j_spring_security_logout ajp://localhost:8009/j_spring_security_logout 
+    ProxyPassReverse /j_spring_security_logout ajp://localhost:8009/j_spring_security_logout
+
+    ProxyPass /mapfishapp/ ajp://localhost:8009/mapfishapp/ 
+    ProxyPassReverse /mapfishapp/ ajp://localhost:8009/mapfishapp/
+
+    ProxyPass /proxy/ ajp://localhost:8009/proxy/ 
+    ProxyPassReverse /proxy/ ajp://localhost:8009/proxy/
+
+    ProxyPass /static/ ajp://localhost:8009/static/ 
+    ProxyPassReverse /static/ ajp://localhost:8009/static/
+
+
+    AddType application/vnd.ogc.context+xml .wmc
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
  
 Apache - Certificat SSL
 -----------------------
@@ -162,15 +243,95 @@ Apache - Certificat SSL
 
 * on rentre les informations sans mettre de mot de pass
 
-        Common Name (eg, YOUR name) []: mettre geoserver.georchestra.inra.fr, cela correspondra à l'adresse du site
+        Common Name (eg, YOUR name) []: mettre vm-georchestra, cela correspondra à l'adresse du site
 
 * Creer une clé non protégée
 
         openssl rsa -in georchestra.key -out georchestra-unprotected.key
         openssl x509 -req -days 365 -in georchestra.csr -signkey georchestra.key -out georchestra.crt
 
+* Redémarrer apache
+
+        sudo /etc/init.d/apache2 restart
+        
 * Test
-	* $ dhclient eth0
 	* Modification du hosts
-	* http://georchestra.georchestra.inra.fr
-	* https://georchestra.georchestra.inra.fr
+	
+            vim /etc/hosts
+
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        127.0.0.1       vm-georchestra
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	* http://vm-georchestra
+	* https://vm-georchestra
+
+Tomcat
+=========
+
+Keystore/Trustore
+-------------------
+
+* Création du keystore
+
+        cd /srv/tomcat/tomcat1/conf/
+        keytool -genkey -alias georchestra_localhost -keystore keystore -storepass mdpstore -keypass mdpstore -keyalg RSA -keysize 2048
+
+    Il faut mettre la valeur "localhost" dans la variable "prénom et nom" puisqu'il s'agit du trust entre le security-proxy, 
+    le CAS qui sont généralement sur le même tomcat. 
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Quels sont vos pr?nom et nom ?
+      [Unknown] :  localhost
+    Quel est le nom de votre unité organisationnelle ?
+      [Unknown] :
+    Quelle est le nom de votre organisation ?
+      [Unknown] :
+    Quel est le nom de votre ville de résidence ?
+      [Unknown] :
+    Quel est le nom de votre état ou province ?
+      [Unknown] :
+    Quel est le code de pays ? deux lettres pour cette unit? ?
+      [Unknown] :
+    Est-ce CN=localhost, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown ?
+      [non] :  oui
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+        keytool -keystore keystore -list
+       
+* Configuration du truststore 
+
+        vim /srv/tomcat/tomcat1/bin/setenv.sh
+        
+    ~~~~~~~~~~~~~~
+    export JAVA_OPTS="$JAVA_OPTS -Djavax.net.ssl.trustStore=/srv/tomcat/tomcat1/conf/keystore -Djavax.net.ssl.trustStorePassword=mdpstore"
+    ~~~~~~~~~~~~~~~
+
+* Configuration des connectors
+
+        vim /srv/tomcat/tomcat1/conf/server.xml
+        
+    ~~~~~~~~~~~~~~~~~~~~~~~~~    
+    <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true"
+       URIEncoding="UTF-8"
+       maxThreads="150" scheme="https" secure="true"
+       clientAuth="false"
+       keystoreFile="/srv/tomcat/tomcat1/conf/keystore"
+       keystorePass="mdpstore"
+       compression="on"
+       compressionMinSize="2048"
+       noCompressionUserAgents="gozilla, traviata"
+       compressableMimeType="text/html,text/xml,text/javascript,application/x-javascript,application/javascript,text/css" />
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    ~~~~~~~~~~~~~~~~~~~~~~
+    <Connector URIEncoding="UTF-8"
+           port="8009"
+           protocol="AJP/1.3"
+           connectionTimeout="20000"
+           redirectPort="8443" />
+    ~~~~~~~~~~~~~~~~~~~~~~
+    
+* Redémarrage de Tomcat
+ 
+        sudo /etc/init.d/tomcat-tomcat1 restart
+    
