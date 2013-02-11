@@ -144,6 +144,7 @@ Apache
 
 * Création de la configuration Apache
 
+        cd conf/
         vim proxypass.conf
         
     Y copier la configuration suivante :
